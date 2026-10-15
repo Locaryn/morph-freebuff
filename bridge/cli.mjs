@@ -192,3 +192,95 @@ export function dateDe(v, base = Date.now()) {
   const t = Date.parse(v);
   return Number.isNaN(t) ? null : new Date(t).toISOString();
 }
+
+/**
+ * Connexion à un compte sans terminal.
+ *
+ * Le CLI officiel est lancé en arrière-plan : il ouvre lui-même la page de
+ * connexion dans le navigateur et écrit son adresse, qu'on rend à Locaryn
+ * (bouton « Ouvrir la page »). S'il attend ensuite un code (Claude Code
+ * l'affiche sur la page après la connexion), Locaryn le transmet par
+ * `envoyerCode`. Sinon (Codex, qui reçoit la réponse en local), il se termine
+ * seul et la carte voit le compte connecté.
+ */
+let connexion = null;
+
+export function demarrerConnexion(exe, args, { attenteMs = 15000 } = {}) {
+  if (connexion) {
+    try {
+      connexion.enfant.kill();
+    } catch {}
+    connexion = null;
+  }
+  return new Promise((resolve) => {
+    let enfant;
+    try {
+      enfant = lancer(exe, args, { stdio: ["pipe", "pipe", "pipe"] });
+    } catch (e) {
+      resolve({ ok: false, detail: `Lancement impossible : ${e}` });
+      return;
+    }
+    const etat = { enfant, sortie: "", url: null, fini: false, code: null };
+    connexion = etat;
+    let rendu = false;
+    const rendre = (r) => {
+      if (!rendu) {
+        rendu = true;
+        resolve(r);
+      }
+    };
+    const lire = (d) => {
+      etat.sortie += d;
+      if (etat.sortie.length > 20000) etat.sortie = etat.sortie.slice(-20000);
+      const m = etat.sortie.match(/https:\/\/[^\s"'<>]+/);
+      if (m && !etat.url) {
+        etat.url = m[0];
+        rendre({ ok: true, url: etat.url });
+      }
+    };
+    enfant.stdout?.setEncoding("utf8");
+    enfant.stderr?.setEncoding("utf8");
+    enfant.stdout?.on("data", lire);
+    enfant.stderr?.on("data", lire);
+    enfant.on("error", (e) => rendre({ ok: false, detail: String(e) }));
+    enfant.on("close", (code) => {
+      etat.fini = true;
+      etat.code = code;
+      if (connexion === etat) connexion = null;
+      rendre({ ok: code === 0, url: etat.url, detail: code === 0 ? "Connecté." : etat.sortie.slice(-400) });
+    });
+    setTimeout(() => rendre({ ok: true, url: etat.url }), attenteMs);
+  });
+}
+
+export function envoyerCode(code, { attenteMs = 60000 } = {}) {
+  const etat = connexion;
+  if (!etat || etat.fini) {
+    return Promise.resolve({ ok: false, detail: "Aucune connexion en cours : cliquez d'abord sur « Se connecter »." });
+  }
+  return new Promise((resolve) => {
+    const t = setTimeout(() => {
+      resolve({ ok: false, detail: "Pas de réponse après le code : réessayez." });
+    }, attenteMs);
+    etat.enfant.once("close", (c) => {
+      clearTimeout(t);
+      resolve(
+        c === 0
+          ? { ok: true, detail: "Connecté." }
+          : {
+              ok: false,
+              detail: `Code refusé${(() => {
+                const l = etat.sortie
+                  .split(/\r?\n/)
+                  .map((x) => x.replace(/^.*>\s*/, "").trim())
+                  .filter(Boolean)
+                  .pop();
+                return l ? ` : ${l}` : ".";
+              })()} Recommencez la connexion.`,
+            },
+      );
+    });
+    etat.enfant.stdin?.write(`${code}
+`);
+  });
+}

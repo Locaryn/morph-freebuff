@@ -2,13 +2,13 @@
   "$schema": "https://locaryn.dev/schema/morph.json/v0.1",
   "apiVersion": "0.1",
   "name": "morph-freebuff",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "Freebuff (Codebuff gratuit) dans Locaryn. Expérimental : le CLI Freebuff n'a pas encore de mode non interactif ; le dossier s'active tout seul dès qu'une version l'apporte.",
   "author": "Locaryn Team",
   "license": "Apache-2.0",
   "homepage": "https://www.codebuff.com",
   "repository": "https://github.com/Locaryn/morph-freebuff",
-  "minLocarynVersion": "0.4.20",
+  "minLocarynVersion": "0.4.21",
   "keywords": [
     "cloud-provider",
     "freebuff",
@@ -54,7 +54,7 @@
         "version": "0.2.27",
         "probe_bin": "freebuff"
       },
-      "start_timeout_seconds": 20
+      "start_timeout_seconds": 60
     }
   },
   "ui_contributions": {
@@ -75,6 +75,14 @@
   "beta": true,
   "stability": "untested",
   "versions": [
+    {
+      "version": "1.0.0-beta.2",
+      "is_beta": true,
+      "summary": "Connexion au compte Freebuff depuis Locaryn, sans terminal (page officielle dans le navigateur, code collé dans l'application) ; le pont répond tout de suite aux sondes et ne paraît plus éteint au premier lancement.",
+      "tag": "v1.0.0-beta.2",
+      "released_at": "2026-10-15",
+      "install_source": "Locaryn/morph-freebuff@v1.0.0-beta.2"
+    },
     {
       "version": "1.0.0-beta.1",
       "is_beta": true,

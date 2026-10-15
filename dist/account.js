@@ -42,6 +42,8 @@
       this.message = null;
       this.erreur = null;
       this.minuteur = null;
+      this.lien = null; // page de connexion, si le navigateur ne s'est pas ouvert
+      this.attendCode = false; // la page affiche un code à coller ici
     }
 
     connectedCallback() {
@@ -160,11 +162,23 @@
       } else if (en && !connecte) {
         actions.appendChild(
           bouton("Se connecter", true, function () {
-            self.faire(function (a) {
-              return a.providers.account(PROVIDER, "login");
+            self.faire(async function (a) {
+              var r = await a.providers.account(PROVIDER, "login");
+              if (r && r.ok === false) throw new Error(r.detail || "La connexion n'a pas démarré.");
+              self.lien = (r && r.url) || null;
+              self.attendCode = !!(r && r.needs_code);
+              return r;
             });
           }),
         );
+        if (this.lien) {
+          var lienEl = el("a", null, "Ouvrir la page de connexion");
+          lienEl.href = this.lien;
+          lienEl.target = "_blank";
+          lienEl.rel = "noopener noreferrer";
+          lienEl.style.cssText = "align-self:center;font-size:12px";
+          actions.appendChild(lienEl);
+        }
       } else if (connecte) {
         actions.appendChild(
           bouton("Se déconnecter", false, function () {
@@ -183,6 +197,36 @@
         b.disabled = self.occupe;
       });
       carte.appendChild(actions);
+
+      // Le code que la page de connexion affiche (Claude) : collé ici, il
+      // termine la connexion sans terminal.
+      if (this.attendCode && en && !connecte) {
+        var form = el("form");
+        form.style.cssText = "display:flex;gap:8px;margin-top:10px";
+        var champ = el("input", "locaryn-input");
+        champ.placeholder = "Collez le code affiché après la connexion";
+        champ.autocomplete = "off";
+        champ.spellcheck = false;
+        champ.style.flex = "1";
+        var valider = el("button", "locaryn-btn-primary", "Valider");
+        valider.type = "submit";
+        valider.disabled = self.occupe;
+        form.appendChild(champ);
+        form.appendChild(valider);
+        form.addEventListener("submit", function (ev) {
+          ev.preventDefault();
+          var code = champ.value.trim();
+          if (!code) return;
+          self.faire(async function (a) {
+            var r = await a.providers.account(PROVIDER, "code", code);
+            if (r && r.ok === false) throw new Error(r.detail || "Code refusé.");
+            self.attendCode = false;
+            self.lien = null;
+            return "Connecté.";
+          });
+        });
+        carte.appendChild(form);
+      }
 
       if (this.message) {
         var m = el("p", "locaryn-field-hint", this.message);

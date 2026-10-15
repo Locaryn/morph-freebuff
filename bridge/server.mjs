@@ -316,9 +316,12 @@ const serveur = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://${HOST}`);
   const chemin = url.pathname.replace(/\/+$/, "") || "/";
   try {
+    // Instantané : Locaryn sonde le pont avec 3 s de patience. Interroger
+    // le CLI ici (`claude auth status`, jusqu'à 15 s au premier lancement,
+    // le temps que l'antivirus l'analyse) faisait passer un pont bien vivant
+    // pour éteint. L'état du compte se lit sur /auth/status.
     if (req.method === "GET" && (chemin === "/health" || chemin === "/")) {
-      const etat = await adapter.status();
-      return json(res, 200, { ok: true, provider: adapter.id, ...etat });
+      return json(res, 200, { ok: true, provider: adapter.id });
     }
     if (req.method === "GET" && chemin === "/v1/models") {
       const modeles = await adapter.models();
@@ -346,6 +349,14 @@ const serveur = http.createServer(async (req, res) => {
     }
     if (chemin === "/auth/status") return json(res, 200, await adapter.status());
     if (req.method === "POST" && chemin === "/auth/login") return json(res, 200, await adapter.login());
+    // Le code que la page de connexion affiche, collé dans Locaryn.
+    if (req.method === "POST" && chemin === "/auth/code") {
+      const corps = await lireCorps(req).catch(() => ({}));
+      const code = String(corps.code ?? "").trim();
+      if (!code) return json(res, 400, { ok: false, detail: "Code vide." });
+      if (!adapter.loginCode) return json(res, 400, { ok: false, detail: "Aucun code à saisir ici." });
+      return json(res, 200, await adapter.loginCode(code));
+    }
     if (req.method === "POST" && chemin === "/auth/logout") {
       return json(res, 200, await adapter.logout());
     }

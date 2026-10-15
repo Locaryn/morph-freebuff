@@ -9,7 +9,9 @@
 
 import path from "node:path";
 import {
+  demarrerConnexion,
   dossierNeutre,
+  envoyerCode,
   executerJsonl,
   ouvrirTerminal,
   sortieDe,
@@ -79,8 +81,14 @@ export default {
   async login() {
     const e = exe();
     if (!e) return { ok: false, detail: "Freebuff n'est pas installé." };
-    ouvrirTerminal("Freebuff — connexion", e, ["login"]);
-    return { ok: true, detail: "Une fenêtre s'est ouverte : terminez la connexion, puis revenez ici." };
+    const r = await demarrerConnexion(e, ["login"]);
+    if (!r.ok) return r;
+    return {
+      ok: true,
+      url: r.url,
+      needs_code: false,
+      detail: "Terminez la connexion dans la page qui s'est ouverte : cette carte se met à jour seule.",
+    };
   },
 
   async logout() {
