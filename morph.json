@@ -1,0 +1,87 @@
+{
+  "$schema": "https://locaryn.dev/schema/morph.json/v0.1",
+  "apiVersion": "0.1",
+  "name": "morph-freebuff",
+  "version": "1.0.0-beta.1",
+  "description": "Freebuff (Codebuff gratuit) dans Locaryn. Expérimental : le CLI Freebuff n'a pas encore de mode non interactif ; le dossier s'active tout seul dès qu'une version l'apporte.",
+  "author": "Locaryn Team",
+  "license": "Apache-2.0",
+  "homepage": "https://www.codebuff.com",
+  "repository": "https://github.com/Locaryn/morph-freebuff",
+  "minLocarynVersion": "0.4.20",
+  "keywords": [
+    "cloud-provider",
+    "freebuff",
+    "codebuff",
+    "free"
+  ],
+  "permissions": {
+    "network": {
+      "reason": "Parler au pont Freebuff sur la boucle locale : modèles, conversations, limites du compte.",
+      "requireApproval": false
+    },
+    "shell": {
+      "reason": "Installer Freebuff, lancer son pont local et ouvrir la fenêtre de connexion au compte — avec les commandes déclarées ici et aucune autre.",
+      "scope": "always"
+    }
+  },
+  "capabilities": [
+    "cloud-provider"
+  ],
+  "cloud_provider": {
+    "id": "freebuff",
+    "label": "Freebuff",
+    "api_url": "http://127.0.0.1:20133",
+    "models_url": "http://127.0.0.1:20133/v1/models",
+    "usage_url": "http://127.0.0.1:20133/v1/usage",
+    "docs_url": "https://github.com/CodebuffAI/freebuff",
+    "key_required": false,
+    "refresh_hours": 6,
+    "local": {
+      "start": [
+        "node",
+        "{{morph_dir}}/bridge/server.mjs"
+      ],
+      "env": {
+        "PORT": "20133",
+        "BRIDGE_GATEWAY_DIR": "{{gateway_dir}}"
+      },
+      "health_url": "http://127.0.0.1:20133/health",
+      "install_hint": "Locaryn peut installer Freebuff lui-même (Node.js 18+ requis), ou : npm install -g freebuff.",
+      "install": {
+        "kind": "npm",
+        "package": "freebuff",
+        "version": "0.2.27",
+        "probe_bin": "freebuff"
+      },
+      "start_timeout_seconds": 20
+    }
+  },
+  "ui_contributions": {
+    "slots": [
+      {
+        "id": "freebuff-account",
+        "slot": "account.connections",
+        "order": 20,
+        "type": "custom-element",
+        "label": "Freebuff",
+        "icon": "cloud",
+        "entry": "dist/account.js",
+        "tag": "locaryn-freebuff-account",
+        "hint": "Connecter votre compte Freebuff"
+      }
+    ]
+  },
+  "beta": true,
+  "stability": "untested",
+  "versions": [
+    {
+      "version": "1.0.0-beta.1",
+      "is_beta": true,
+      "summary": "Premier pont Freebuff : modèles dans le dossier Freebuff, connexion du compte depuis Réglages → Compte, jauge des limites.",
+      "tag": "v1.0.0-beta.1",
+      "released_at": "2026-10-15",
+      "install_source": "Locaryn/morph-freebuff@v1.0.0-beta.1"
+    }
+  ]
+}
